@@ -10,7 +10,7 @@ Why re-write it in Go?
 ## Install
 
 - Install from source: `go install github.com/jc1518/Concierge`
-- Download compiled binary: [TODO]
+- Download compiled binary from [released versions](https://github.com/jc1518/Concierge/releases)
 
 ## Usage
 
@@ -25,8 +25,3 @@ Why re-write it in Go?
    -stacks-arn string
            CloudFormation stacks ARN, use comma to seperate if more than one
    ```
-
-## [TODO]
-
-- Tests
-- Github action to build and publish the binary

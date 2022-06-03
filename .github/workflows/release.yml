@@ -21,7 +21,7 @@ jobs:
           go mod download
 
       - name: Build
-        run: build.sh
+        run: ./build.sh
 
       - uses: actions/upload-artifact@v3
         with:

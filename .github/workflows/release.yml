@@ -20,6 +20,11 @@ jobs:
         run: |
           go mod download
 
+      - name: Test
+        run: |
+          export CLOUD_CONFORMITY_API_KEY="dummy"
+          go test -v
+
       - name: Build
         run: ./build.sh
 

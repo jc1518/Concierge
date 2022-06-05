@@ -15,6 +15,26 @@ func IsArnValid(arn string) bool {
 	return validArn.MatchString(arn)
 }
 
+type ListStackResourcesPager interface {
+	HasMorePages() bool
+	NextPage(context.Context, ...func(*cloudformation.Options)) (*cloudformation.ListStackResourcesOutput, error)
+}
+
+func ListStackResources(ctx context.Context, pager ListStackResourcesPager) (resourceIds []string, err error) {
+	for pager.HasMorePages() {
+		var page *cloudformation.ListStackResourcesOutput
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return resourceIds, err
+		}
+		for _, resource := range page.StackResourceSummaries {
+			resourceIds = append(resourceIds, *resource.PhysicalResourceId)
+		}
+	}
+
+	return resourceIds, nil
+}
+
 func GetStackResources(arn string) []string {
 	region := strings.Split(arn, ":")[3]
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
@@ -22,22 +42,17 @@ func GetStackResources(arn string) []string {
 		ErrorLogger.Fatalf("failed to load aws config, %v", err.Error())
 	}
 
-	var resourceIds []string
-
 	client := cloudformation.NewFromConfig(cfg)
-	pages := cloudformation.NewListStackResourcesPaginator(client, &cloudformation.ListStackResourcesInput{
+
+	pager := cloudformation.NewListStackResourcesPaginator(client, &cloudformation.ListStackResourcesInput{
 		StackName: &arn,
 	})
 
-	for pages.HasMorePages() {
-		page, err := pages.NextPage(context.TODO())
-		if err != nil {
-			ErrorLogger.Fatalf("failed to get stack resources, %v", err.Error())
-		}
-		for _, resource := range page.StackResourceSummaries {
-			resourceIds = append(resourceIds, *resource.PhysicalResourceId)
-		}
+	resp, err := ListStackResources(context.TODO(), pager)
+	if err != nil {
+		ErrorLogger.Fatalf("failed to get stack resources, %v", err.Error())
 	}
 
-	return resourceIds
+	return resp
+
 }

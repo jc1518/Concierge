@@ -11,16 +11,18 @@ import (
 )
 
 func TestValidArn(t *testing.T) {
-	isValid := IsArnValid("arn:aws:cloudformation:ap-southeast-2:123456789012:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc")
+	stackArn := "arn:aws:cloudformation:ap-southeast-2:123456789012:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc"
+	isValid := IsArnValid(stackArn)
 	if !isValid {
-		t.Errorf(`IsArnValid("arn:aws:cloudformation:ap-southeast-2:123456789012:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc") = %t; want true`, isValid)
+		t.Errorf(`IsArnValid(%s) = %t; want true`, stackArn, isValid)
 	}
 }
 
 func TestInvalidValidArn(t *testing.T) {
-	isValid := IsArnValid("arn:aws:cloudformation:ap-southeast-2:123456789:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc")
+	stackArn := "arn:aws:cloudformation:ap-southeast-2:123456789:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc"
+	isValid := IsArnValid(stackArn)
 	if isValid {
-		t.Errorf(`IsArnValid("arn:aws:cloudformation:ap-southeast-2:123456789:stack/my-stack/69d48220-010d-11ec-982a-06dd10360dfc") = %t; want false`, isValid)
+		t.Errorf(`IsArnValid(%s) = %t; want false`, stackArn, isValid)
 	}
 }
 

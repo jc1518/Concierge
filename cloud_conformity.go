@@ -8,29 +8,8 @@ import (
 
 const CLOUD_CONFORMITY_BASE_URL = "https://ap-southeast-2-api.cloudconformity.com/v1/"
 
-func getRequest(path string) []byte {
-	client := &http.Client{}
-
-	req, err := http.NewRequest("GET", CLOUD_CONFORMITY_BASE_URL+path, nil)
-	if err != nil {
-		ErrorLogger.Fatalf("failed to form the request, %v", err.Error())
-	}
-
-	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add("Authorization", "ApiKey "+CLOUD_CONFORMITY_API_KEY)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		ErrorLogger.Fatalf("failed to send request to url, %v", err.Error())
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ErrorLogger.Fatalf("failed to get response from url, %v", err.Error())
-	}
-
-	return body
+type Data struct {
+	Data []Entity `json:"data"`
 }
 
 // Entity can be Account or Check
@@ -40,25 +19,51 @@ type Entity struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
 
-type Data struct {
-	Data []Entity `json:"data"`
+func GetRequest(url string) (entities []Entity, err error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", "application/vnd.api+json")
+	req.Header.Add("Authorization", "ApiKey "+CLOUD_CONFORMITY_API_KEY)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var data Data
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+
+	entities = data.Data
+	return entities, nil
 }
 
 func GetAllAccounts() []Entity {
-	var accounts Data
-
-	err := json.Unmarshal(getRequest("accounts"), &accounts)
+	accounts, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + "accounts")
 	if err != nil {
 		ErrorLogger.Fatalf("faile to get all accounts, %v", err.Error())
 	}
 
-	return accounts.Data
+	return accounts
 }
 
-func GetAwsAccounts(allAccounts []Entity) []Entity {
+func GetAwsAccounts(accounts []Entity) []Entity {
 	var awsAccounts []Entity
 
-	for _, account := range allAccounts {
+	for _, account := range accounts {
 		if _, exist := account.Attributes["awsaccount-id"]; exist {
 			awsAccounts = append(awsAccounts, account)
 		}
@@ -67,8 +72,8 @@ func GetAwsAccounts(allAccounts []Entity) []Entity {
 	return awsAccounts
 }
 
-func GetAwsAccountCcId(allAwsAccounts []Entity, accountId string) string {
-	for _, account := range allAwsAccounts {
+func GetAwsAccountCcId(awsAccounts []Entity, accountId string) string {
+	for _, account := range awsAccounts {
 		if account.Attributes["awsaccount-id"] == accountId {
 			return account.Id
 		}
@@ -78,13 +83,11 @@ func GetAwsAccountCcId(allAwsAccounts []Entity, accountId string) string {
 }
 
 func GetResourcesFailedChecks(ccId string, resourceId string) []Entity {
-	var failedChecks Data
-
 	path := "checks?accountIds=" + ccId + "&filter[resource]=" + resourceId + "&filter[statuses]=FAILURE"
-	err := json.Unmarshal(getRequest(path), &failedChecks)
+	failedChecks, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + path)
 	if err != nil {
 		ErrorLogger.Fatalf("faile to get failed checks, %v", err.Error())
 	}
 
-	return failedChecks.Data
+	return failedChecks
 }

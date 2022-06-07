@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -25,12 +26,9 @@ func init() {
 
 }
 
-func main() {
-	stackArns := flag.String("stacks-arn", "", "CloudFormation stacks ARN, use comma to seperate if more than one")
-	flag.Parse()
-
+func ScanStack(stackArns string) {
 	InfoLogger.Println("Validate CloudFormation stack ARN")
-	for _, stackArn := range strings.Split(*stackArns, ",") {
+	for _, stackArn := range strings.Split(stackArns, ",") {
 		if !IsArnValid(stackArn) {
 			ErrorLogger.Fatalf("%v is not a valid CloudFormation stack ARN", stackArn)
 		}
@@ -41,7 +39,7 @@ func main() {
 	allAccounts := GetAllAccounts()
 	allAwsAccounts := GetAwsAccounts(allAccounts)
 
-	for _, stackArn := range strings.Split(*stackArns, ",") {
+	for _, stackArn := range strings.Split(stackArns, ",") {
 		account := strings.Split(stackArn, ":")[4]
 		ccId := GetAwsAccountCcId(allAwsAccounts, account)
 		InfoLogger.Printf("List resources in stack %v", stackArn)
@@ -53,4 +51,31 @@ func main() {
 			}
 		}
 	}
+}
+
+func ScanTemplate(templateFile string) {
+	fmt.Print(templateFile)
+	content := `{"AWSTemplateFormatVersion": "2010-09-09",  "Resources": {"AthenaS3Bucket": {"Type": "AWS::S3::Bucket"}}}`
+	results := ScanCfnTemplate(content)
+	for _, check := range results {
+		if check.Attributes["status"] == "FAILURE" {
+			WarningLogger.Printf("%v (%v): %v", check.Attributes["risk-level"], check.Attributes["descriptorType"], check.Attributes["message"])
+		}
+	}
+
+}
+
+func main() {
+	stackArns := flag.String("stacks-arn", "", "CloudFormation stacks ARN, use comma to seperate if more than one")
+	templateFile := flag.String("template-file", "", "CloudFormation template file")
+	flag.Parse()
+
+	if stackArns != nil {
+		ScanStack(*stackArns)
+	}
+
+	if templateFile != nil {
+		ScanTemplate(*templateFile)
+	}
+
 }

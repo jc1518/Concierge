@@ -68,7 +68,7 @@ func TestGetRequest(t *testing.T) {
 	for _, tc := range testTable {
 		t.Run(tc.name, func(t *testing.T) {
 			defer tc.server.Close()
-			resp, err := GetRequest(tc.server.URL)
+			resp, err := MakeRequest(tc.server.URL, nil)
 			if !reflect.DeepEqual(resp, tc.expectedResponse) {
 				t.Errorf("expect %v, got %v", tc.expectedResponse, resp)
 			}

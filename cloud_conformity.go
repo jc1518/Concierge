@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -20,42 +21,15 @@ type Entity struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
 
-func GetRequest(url string) (entities []Entity, err error) {
+func MakeRequest(url string, payload io.Reader) (entities []Entity, err error) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
+	method := "GET"
+	if payload != nil {
+		method = "POST"
 	}
 
-	req.Header.Add("Content-Type", "application/vnd.api+json")
-	req.Header.Add("Authorization", "ApiKey "+CLOUD_CONFORMITY_API_KEY)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var data Data
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return nil, err
-	}
-
-	entities = data.Data
-	return entities, nil
-}
-
-func PostRequest(url string, payload string) (entities []Entity, err error) {
-	client := &http.Client{}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBufferString(payload))
+	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +59,7 @@ func PostRequest(url string, payload string) (entities []Entity, err error) {
 }
 
 func GetAllAccounts() []Entity {
-	accounts, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + "accounts")
+	accounts, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"accounts", nil)
 	if err != nil {
 		ErrorLogger.Fatalf("faile to get all accounts, %v", err.Error())
 	}
@@ -118,7 +92,7 @@ func GetAwsAccountCcId(awsAccounts []Entity, accountId string) string {
 func GetResourcesFailedChecks(ccId string, resourceId string) []Entity {
 	path := "checks?accountIds=" + ccId + "&filter[resource]=" + resourceId + "&filter[statuses]=FAILURE"
 
-	failedChecks, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + path)
+	failedChecks, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+path, nil)
 	if err != nil {
 		ErrorLogger.Fatalf("failed to get failed checks, %v", err.Error())
 	}
@@ -126,10 +100,10 @@ func GetResourcesFailedChecks(ccId string, resourceId string) []Entity {
 	return failedChecks
 }
 
-func ScanCfnTemplate(contents string) []Entity {
-	payload := `{"data":{"attributes":{"type":"cloudformation-template","contents":` + contents + "}}}}"
+func ScanCfnTemplate(templateContents string) []Entity {
+	payload := `{"data":{"attributes":{"type":"cloudformation-template","contents":` + templateContents + "}}}}"
 
-	results, err := PostRequest(CLOUD_CONFORMITY_BASE_URL+"template-scanner/scan", payload)
+	results, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"template-scanner/scan", bytes.NewBufferString(payload))
 	if err != nil {
 		ErrorLogger.Fatalf("failed to scan the template, %v", err.Error())
 	}

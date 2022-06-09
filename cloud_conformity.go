@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -19,10 +21,15 @@ type Entity struct {
 	Attributes map[string]interface{} `json:"attributes"`
 }
 
-func GetRequest(url string) (entities []Entity, err error) {
+func MakeRequest(url string, payload io.Reader) (entities []Entity, err error) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest("GET", url, nil)
+	method := "GET"
+	if payload != nil {
+		method = "POST"
+	}
+
+	req, err := http.NewRequest(method, url, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +48,10 @@ func GetRequest(url string) (entities []Entity, err error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		ErrorLogger.Fatalf("CloudConformity returns %d, %v", resp.StatusCode, string(body))
+	}
+
 	var data Data
 	err = json.Unmarshal(body, &data)
 	if err != nil {
@@ -52,9 +63,9 @@ func GetRequest(url string) (entities []Entity, err error) {
 }
 
 func GetAllAccounts() []Entity {
-	accounts, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + "accounts")
+	accounts, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"accounts", nil)
 	if err != nil {
-		ErrorLogger.Fatalf("faile to get all accounts, %v", err.Error())
+		ErrorLogger.Fatalf("Failed to get all accounts - %v", err.Error())
 	}
 
 	return accounts
@@ -84,10 +95,22 @@ func GetAwsAccountCcId(awsAccounts []Entity, accountId string) string {
 
 func GetResourcesFailedChecks(ccId string, resourceId string) []Entity {
 	path := "checks?accountIds=" + ccId + "&filter[resource]=" + resourceId + "&filter[statuses]=FAILURE"
-	failedChecks, err := GetRequest(CLOUD_CONFORMITY_BASE_URL + path)
+
+	failedChecks, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+path, nil)
 	if err != nil {
-		ErrorLogger.Fatalf("faile to get failed checks, %v", err.Error())
+		ErrorLogger.Fatalf("Failed to get failed checks - %v", err.Error())
 	}
 
 	return failedChecks
+}
+
+func ScanCfnTemplate(templateContents string) []Entity {
+	payload := `{"data":{"attributes":{"type":"cloudformation-template","contents":` + templateContents + "}}}}"
+
+	results, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"template-scanner/scan", bytes.NewBufferString(payload))
+	if err != nil {
+		ErrorLogger.Fatalf("Failed to scan the template - %v", err.Error())
+	}
+
+	return results
 }

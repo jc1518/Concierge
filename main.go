@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	VERSION                  = "0.3.0-beta"
+	VERSION                  = "0.3.0"
 	CLOUD_CONFORMITY_API_KEY = os.Getenv("CLOUD_CONFORMITY_API_KEY")
 	InfoLogger               *log.Logger
 	WarningLogger            *log.Logger

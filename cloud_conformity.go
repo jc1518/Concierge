@@ -48,6 +48,10 @@ func MakeRequest(url string, payload io.Reader) (entities []Entity, err error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		ErrorLogger.Fatalf("CloudConformity returns %d, %v", resp.StatusCode, string(body))
+	}
+
 	var data Data
 	err = json.Unmarshal(body, &data)
 	if err != nil {
@@ -61,7 +65,7 @@ func MakeRequest(url string, payload io.Reader) (entities []Entity, err error) {
 func GetAllAccounts() []Entity {
 	accounts, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"accounts", nil)
 	if err != nil {
-		ErrorLogger.Fatalf("faile to get all accounts, %v", err.Error())
+		ErrorLogger.Fatalf("Failed to get all accounts - %v", err.Error())
 	}
 
 	return accounts
@@ -94,7 +98,7 @@ func GetResourcesFailedChecks(ccId string, resourceId string) []Entity {
 
 	failedChecks, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+path, nil)
 	if err != nil {
-		ErrorLogger.Fatalf("failed to get failed checks, %v", err.Error())
+		ErrorLogger.Fatalf("Failed to get failed checks - %v", err.Error())
 	}
 
 	return failedChecks
@@ -105,7 +109,7 @@ func ScanCfnTemplate(templateContents string) []Entity {
 
 	results, err := MakeRequest(CLOUD_CONFORMITY_BASE_URL+"template-scanner/scan", bytes.NewBufferString(payload))
 	if err != nil {
-		ErrorLogger.Fatalf("failed to scan the template, %v", err.Error())
+		ErrorLogger.Fatalf("Failed to scan the template - %v", err.Error())
 	}
 
 	return results

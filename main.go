@@ -58,7 +58,7 @@ func ScanStack(stackArns string) {
 	}
 }
 
-func ReadTemplateFile(templateFile string) string {
+func ReadTemplateFile(templateFile string, validate bool) string {
 	lower := strings.ToLower(templateFile)
 	IsYamOrJson := strings.Contains(lower, ".yaml") || strings.Contains(lower, ".yml") || strings.Contains(lower, ".json")
 	if !IsYamOrJson {
@@ -71,8 +71,12 @@ func ReadTemplateFile(templateFile string) string {
 		ErrorLogger.Fatalf("Failed to load template file - %v", err.Error())
 	}
 	contents := string(contentsBytes)
-	if !IsTemplateValid(contents) {
-		ErrorLogger.Fatalf("Not a valid CloudFormation template")
+
+	if validate {
+		InfoLogger.Print("Validate CloudFormation template")
+		if !IsTemplateValid(contents) {
+			ErrorLogger.Fatalf("Not a valid CloudFormation template")
+		}
 	}
 
 	if strings.Contains(lower, ".yaml") || strings.Contains(lower, ".yml") {
@@ -105,11 +109,13 @@ func ScanTemplate(templateContents string) {
 
 func help() {
 	fmt.Println("Version:", VERSION)
+	flag.PrintDefaults()
 }
 
 func main() {
 	stackArns := flag.String("stacks-arn", "", "CloudFormation stacks ARN, use comma to seperate if more than one")
 	templateFile := flag.String("template-file", "", "CloudFormation template file (json or yaml)")
+	validate := flag.Bool("validate-template", false, "Validate CloudFormation template before scanning")
 	flag.Parse()
 
 	if *stackArns == "" && *templateFile == "" {
@@ -121,7 +127,7 @@ func main() {
 	}
 
 	if *templateFile != "" {
-		templateContents := ReadTemplateFile(*templateFile)
+		templateContents := ReadTemplateFile(*templateFile, *validate)
 		ScanTemplate(templateContents)
 	}
 }

@@ -19,16 +19,18 @@ Why re-write it in Go?
 
 1.  Setup CloudConformity API key environment variable `CLOUD_CONFORMITY_API_KEY` (You should be able to create one in CloudConformity console `User settings > API Keys` if you don't have one yet).
 
-2.  Setup your AWS credential (e.g. environment variables, profile or EC2 instance role).
+2.  Setup your AWS credential (e.g. environment variables, profile or EC2 instance role). This is not required for scanning CloudFormation template without validation.
 
 3.  Follow the usage:
 
     ```
     Usage of Concierge:
-    -stacks-arn string
-        CloudFormation stacks ARN, use comma to seperate if more than one
-    -template-file string
-        CloudFormation template file (json or yaml)
+        -stacks-arn string
+                CloudFormation stacks ARN, use comma to seperate if more than one
+        -template-file string
+                CloudFormation template file (json or yaml)
+        -validate-template
+                Validate CloudFormation template before scanning
     ```
 
     - Example: Check compliance status of a CloudFormation stack
